@@ -1,6 +1,7 @@
 # ring's aarch64 assembly guards on `__ARM_ARCH`, which the manylinux
-# aarch64-gnu cross gcc does not define by default (the musl cross toolchain
-# does, so only this target needs help). -march=armv8-a makes gcc define it.
+# aarch64-gnu cross gcc does not define even with -march (the musl cross
+# toolchain does, so only this target needs help). Define it explicitly so the
+# `#ifndef __ARM_ARCH` guard passes; -march keeps the assembler on armv8.
 # Target-scoped, so it has no effect on any other build.
 [env]
-CFLAGS_aarch64_unknown_linux_gnu = "-march=armv8-a"
+CFLAGS_aarch64_unknown_linux_gnu = "-march=armv8-a -D__ARM_ARCH=8"
