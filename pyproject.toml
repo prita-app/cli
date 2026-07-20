@@ -28,3 +28,6 @@ build-backend = "maturin"
 bindings = "bin"
 manifest-path = "crates/prita-cli/Cargo.toml"
 strip = true
+# Bundle LICENSE into the sdist too; the metadata declares License-File: LICENSE,
+# and PyPI rejects the sdist if the file isn't actually in the tarball.
+include = ["LICENSE"]
