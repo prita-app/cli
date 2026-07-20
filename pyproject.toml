@@ -1,0 +1,30 @@
+[project]
+name = "prita"
+description = "Command-line interface for Prita, a read-it-later and knowledge library."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [{ name = "Caleb Hamilton" }]
+keywords = ["prita", "read-it-later", "cli", "bookmarks", "agents", "graphql"]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Rust",
+    "Topic :: Utilities",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://prita.app"
+Repository = "https://github.com/prita-app/cli"
+Issues = "https://github.com/prita-app/cli/issues"
+
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[tool.maturin]
+# Package the compiled `prita` binary as a wheel script, so `uvx prita` runs the
+# native binary directly.
+bindings = "bin"
+manifest-path = "crates/prita-cli/Cargo.toml"
+strip = true

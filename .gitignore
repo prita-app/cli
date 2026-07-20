@@ -1,0 +1,10 @@
+/target
+**/*.rs.bk
+.DS_Store
+.env
+*.log
+
+# Python / maturin build artifacts
+/dist
+*.egg-info
+__pycache__/
