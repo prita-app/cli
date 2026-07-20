@@ -1,90 +1,88 @@
-"""Opaque JSON — the client-owned reading-preferences blob (see specs/006 data-model.md §1)."""
+# Prita GraphQL schema, synced by hand from the api (api/src/graphql on main).
+# cynic type-checks the CLI's queries against this at compile time. Keep it in
+# sync when the API schema changes. Timestamps are plain rfc3339 strings; the
+# only custom scalar is Json (the reading-preferences blob).
+
 scalar Json
 
-"""ISO-8601 timestamp (async-graphql DateTime), handled as a String client-side."""
-scalar DateTime
-
 type Query {
-  article(id: String): Article
-
-  """
-  The unified article list (008). No `tag`: everything the user saved, newest-saved first.
-  With `tag`: articles under that tag (rollup via includeDescendants, default true),
-  ordered by most recent membership in the subtree.
-  """
-  articles(tag: ID, includeDescendants: Boolean! = true, first: Int, after: String): ArticleConnection!
-
-  """
-  The user's full tag tree as a FLAT list (each tag carries parentId); the client
-  assembles the tree. Alpha-sorted among siblings, case-insensitive. Includes system tags.
-  Never paginated (≤ 500 tags/user).
-  """
+  "The user's whole tag tree as a flat list; each tag carries parentId."
   tags: [Tag!]!
-
+  "No tag: everything saved, newest-saved first. With tag: articles under it."
+  articles(tag: ID, includeDescendants: Boolean! = true, after: String, first: Int): ArticleConnection!
+  article(id: ID!): Article
+  "The current user's reading preferences, or null if never set."
   readingPreferences: Json
+}
+
+type Mutation {
+  createTag(input: CreateTagInput!): Tag!
+  renameTag(input: RenameTagInput!): Tag!
+  setTagColor(input: SetTagColorInput!): Tag!
+  moveTag(input: MoveTagInput!): Tag!
+  deleteTag(id: ID!): DeleteTagResult!
+  createTagPath(input: CreateTagPathInput!): [Tag!]!
+  pinTag(id: ID!): Tag!
+  unpinTag(id: ID!): Tag!
+  tagArticle(input: TagArticleInput!): Article!
+  untagArticle(input: UntagArticleInput!): Article!
+  "Upload a new article from a URL."
+  uploadArticle(input: UploadArticleInput!): ArticleUploadResult!
+  deleteArticle(id: ID!): Article!
+  saveReadingProgress(input: SaveReadingProgressInput!): Boolean!
+  updateReadingPreferences(input: UpdateReadingPreferencesInput!): Json!
 }
 
 type Article {
   id: ID!
-  title: String
+  title: String!
+  content: String!
+  textContent: String!
+  length: Int!
+  description: String
   author: String
   siteName: String
+  lang: String
   publishedTime: String
-  content: String
-  url: String
-  description: String
-  capturedAt: String
+  url: String!
   iconUrl: String
+  imageUrl: String
+  capturedAt: String!
   readingProgressPercent: Int
+  readingProgressTopPercent: Int
   readingProgressAnchorIdx: Int
-
-  """The tags applied to this article, most recently applied first."""
+  readAt: String
   tags: [Tag!]!
 }
 
-enum TagColor {
-  TOMATO
-  CRIMSON
-  PLUM
-  VIOLET
-  INDIGO
-  BLUE
-  TEAL
-  GRASS
-  AMBER
-  BROWN
-}
-
-enum TagKind {
-  USER
-  UP_NEXT
-  FAVORITES
+type ArticleUploadResult {
+  article: Article!
+  wasAlreadySaved: Boolean!
 }
 
 type Tag {
   id: ID!
   name: String!
-  """Null when the tag has no color; `orange` is deliberately absent (brand accent)."""
   color: TagColor
-  """Null for a root tag."""
   parentId: ID
-  """USER tags are fully editable. System kinds cannot be renamed, moved, deleted, or nested into."""
   kind: TagKind!
-  """When the user pinned this tag; null = unpinned. Per-tag last-write-wins across devices."""
-  pinnedAt: DateTime
-  createdAt: DateTime!
+  createdAt: String!
+  pinnedAt: String
+  directCount: Int!
+  subtreeCount: Int!
 }
 
 type DeleteTagResult {
-  """Every tag removed, including the whole subtree — for client cache eviction."""
   deletedTagIds: [ID!]!
-  """How many tags were removed."""
   deletedCount: Int!
 }
 
+enum TagColor { TOMATO CRIMSON PLUM VIOLET INDIGO BLUE TEAL GRASS AMBER BROWN }
+enum TagKind { USER UP_NEXT FAVORITES }
+
 type ArticleConnection {
-  pageInfo: PageInfo!
   edges: [ArticleEdge!]!
+  pageInfo: PageInfo!
 }
 
 type ArticleEdge {
@@ -93,58 +91,19 @@ type ArticleEdge {
 }
 
 type PageInfo {
+  hasPreviousPage: Boolean!
   hasNextPage: Boolean!
+  startCursor: String
   endCursor: String
 }
 
-type Mutation {
-  deleteArticle(id: String): Article
-  saveReadingProgress(input: SaveReadingProgressInput!): Boolean
-  updateReadingPreferences(input: UpdateReadingPreferencesInput!): Json!
-
-  # --- 008: tree ---
-
-  "Create a tag. `parentId` null = root."
-  createTag(input: CreateTagInput!): Tag!
-
-  "Rename a tag. Does not reorder its articles."
-  renameTag(input: RenameTagInput!): Tag!
-
-  "Set or clear a tag's color. `color: null` clears it."
-  setTagColor(input: SetTagColorInput!): Tag!
-
-  "Reparent a tag; its entire subtree moves with it. `parentId: null` moves it to the root."
-  moveTag(input: MoveTagInput!): Tag!
-
-  "Delete a tag AND its entire subtree. Never deletes articles — they are only untagged."
-  deleteTag(id: ID!): DeleteTagResult!
-
-  # --- 008: membership ---
-
-  "Tag an article. Works on system tags: this is how 'Add to Up Next' is implemented."
-  tagArticle(input: TagArticleInput!): Article!
-
-  "Untag an article. Works on system tags: this is how 'Mark done' is implemented."
-  untagArticle(input: UntagArticleInput!): Article!
-
-  # --- 009 delta: pins + atomic mkdir -p ---
-
-  "Pin a tag into the user's navigation. Idempotent. Allowed on system tags."
-  pinTag(id: ID!): Tag!
-
-  "Unpin a tag. Idempotent."
-  unpinTag(id: ID!): Tag!
-
-  """
-  Atomic mkdir -p: walks segments root→leaf, matching existing siblings case-insensitively
-  and creating the missing; validated as a whole; all-or-nothing. Returns the full
-  root→leaf chain. Does NOT tag any article.
-  """
-  createTagPath(input: CreateTagPathInput!): [Tag!]!
+input UploadArticleInput {
+  url: String!
+  content: String
 }
 
 input SaveReadingProgressInput {
-  articleId: String!
+  articleId: ID!
   readingProgressPercent: Int!
   readingProgressAnchorIdx: Int
 }
@@ -174,6 +133,10 @@ input MoveTagInput {
   parentId: ID
 }
 
+input CreateTagPathInput {
+  segments: [String!]!
+}
+
 input TagArticleInput {
   articleId: ID!
   tagId: ID!
@@ -182,9 +145,4 @@ input TagArticleInput {
 input UntagArticleInput {
   articleId: ID!
   tagId: ID!
-}
-
-input CreateTagPathInput {
-  "Path segments, already split and trimmed by the client (never contain '/')."
-  segments: [String!]!
 }

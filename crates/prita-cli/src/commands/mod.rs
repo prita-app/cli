@@ -1,7 +1,9 @@
 //! Command dispatch.
 
+mod articles;
 mod auth;
-mod list;
+mod tags;
+mod view;
 
 use prita_client::{PritaClient, config};
 
@@ -13,7 +15,14 @@ use crate::output::Format;
 pub async fn dispatch(cli: Cli, format: Format) -> Result<(), CliError> {
     match cli.command {
         Command::Auth { command } => auth::run(command, format).await,
-        Command::List(args) => list::run(args, format).await,
+        Command::List(args) => articles::list(args, format).await,
+        Command::Get(args) => articles::get(args, format).await,
+        Command::Save(args) => articles::save(args, format).await,
+        Command::Rm(args) => articles::rm(args, format).await,
+        Command::Tag(args) => articles::tag(args, format).await,
+        Command::Untag(args) => articles::untag(args, format).await,
+        Command::Progress(args) => articles::progress(args, format).await,
+        Command::Tags(args) => tags::run(args, format).await,
     }
 }
 

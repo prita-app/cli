@@ -111,14 +111,10 @@ struct AuthStatus {
 
 impl Render for AuthStatus {
     fn plain(&self) -> String {
-        match (self.authenticated, self.source) {
-            (true, Some(TokenSource::Env)) => {
-                format!("Authenticated via PRITA_TOKEN ({}).", self.api_url)
-            }
-            (true, Some(TokenSource::Config)) => {
-                format!("Authenticated via stored token ({}).", self.api_url)
-            }
-            _ => "Not authenticated. Run `prita auth login` or set PRITA_TOKEN.".to_string(),
+        if self.authenticated {
+            format!("Authenticated ({}).", self.api_url)
+        } else {
+            "Not authenticated. Run `prita auth login` or set PRITA_TOKEN.".to_string()
         }
     }
 }
